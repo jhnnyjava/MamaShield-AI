@@ -9,6 +9,7 @@ from database import get_or_create_user, append_history, log_metric, update_user
 from grok_service import get_grok_response
 from sms_service import send_sms
 from danger_detection import detect_danger_signs
+from chw_referral import send_chw_alert, send_anc_visit_thank_you, get_farm_specific_tips, track_farm_worker_engagement
 
 
 router = APIRouter()
@@ -24,11 +25,28 @@ async def process_message(phone: str, text: str) -> str:
     user = await get_or_create_user(phone)
     language = user.language or "en"
     
-    # Check if this is an ANC poll response
+    # Check if user is identifying as tea farm worker
     text_upper = text.strip().upper()
+    if text_upper == "TEA":
+        await update_user(user.phone_hash, is_tea_farm_worker=1, language="kal")
+        await track_farm_worker_engagement(user.phone_hash, "onboarding")
+        farm_tips = get_farm_specific_tips("picking", "kal")
+        response = f"Welcome tea farm mama! {farm_tips} We'll send you special tips for farm workers."
+        await log_metric("tea_farm_registration")
+        return response
+    
+    # Check if this is an ANC poll response
     if text_upper in ['Y', 'YES', 'N', 'NO']:
         if text_upper in ['Y', 'YES']:
             await log_metric("anc_poll_yes", {"language": language})
+            
+            # Send thank you for ANC visit (referral incentive)
+            await send_anc_visit_thank_you(phone, language)
+            
+            # Track for tea farm workers (KTDA partnership data)
+            if user.is_tea_farm_worker:
+                await track_farm_worker_engagement(user.phone_hash, "anc_visit")
+            
             return "Great! Keep attending your ANC visits. Your health matters!"
         else:
             await log_metric("anc_poll_no", {"language": language})
@@ -39,9 +57,9 @@ async def process_message(phone: str, text: str) -> str:
     if is_danger:
         await log_metric("danger_flag", {"language": language})
         
-        # Alert CHW about high-risk case
-        chw_alert = f"High-risk alert! User {phone[-4:]} reported danger signs. Call them immediately."
-        await send_sms(settings.CHW_PHONE, chw_alert)
+        # Send enhanced CHW alert with location context
+        location = "Mulot tea zone" if user.is_tea_farm_worker else "Bomet area"
+        await send_chw_alert(phone, text[:100], location)
         
         await append_history(user.phone_hash, "user", text)
         await append_history(user.phone_hash, "assistant", danger_msg)
@@ -57,10 +75,19 @@ async def process_message(phone: str, text: str) -> str:
     interaction_count = (user.interaction_count or 0) + 1
     await update_user(user.phone_hash, interaction_count=interaction_count)
     
+    # First interaction - ask about tea farm work
+    if interaction_count == 1:
+        ai_response += " Reply TEA if you work/pick tea - get special tips for farm moms."
+    
     # Send ANC poll every 4 interactions
     if interaction_count % 4 == 0:
         anc_poll = "Did you attend ANC this month? Reply Y for yes, N for no."
         ai_response += f" {anc_poll}"
+    
+    # Add farm-specific tips for tea workers every 3 interactions
+    if user.is_tea_farm_worker and interaction_count % 3 == 0:
+        farm_tip = get_farm_specific_tips("picking", language)
+        ai_response += f" Farm tip: {farm_tip[:80]}..."
     
     # Update conversation history
     await append_history(user.phone_hash, "user", text)

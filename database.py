@@ -23,6 +23,7 @@ class User(Base):
     last_interaction = Column(DateTime)
     history = Column(JSON, default=list)  # list of {"role": str, "content": str}, last 8-10
     interaction_count = Column(Integer, default=0)  # Track interactions for ANC polling
+    is_tea_farm_worker = Column(Integer, default=0)  # 1 if tea farm worker (for KTDA partnership)
 
 
 class Metrics(Base):

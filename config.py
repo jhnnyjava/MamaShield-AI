@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     DEFAULT_LANGUAGE: str = "en"
     SMS_DISCLAIMER: str
     CHW_PHONE: str
+    TEA_CHW_PHONE: str = ""
+    FARM_CLINIC_NUMBER: str = ""
     
     model_config = SettingsConfigDict(
         env_file=".env",
