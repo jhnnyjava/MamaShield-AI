@@ -5,6 +5,7 @@ from slowapi.util import get_remote_address
 
 from config import settings
 from database import init_db
+from routes import router
 
 
 # Initialize FastAPI app
@@ -39,4 +40,5 @@ async def root():
     return {"message": "MamaShield AI running"}
 
 
-# Include routers later
+# Include routers
+app.include_router(router)
