@@ -36,9 +36,9 @@ async def enrich_prompt_with_culture(base_prompt: str, language: str, user_messa
     return base_prompt
 
 
-async def get_grok_response(history: list, user_message: str, language: str = "en", pregnancy_weeks: int = None) -> str:
+async def get_ai_response(history: list, user_message: str, language: str = "en", pregnancy_weeks: int = None) -> str:
     """
-    Get AI response from Grok API for maternal health queries.
+    Get AI response for maternal health queries.
     
     Args:
         history: List of previous conversation messages
@@ -74,12 +74,12 @@ async def get_grok_response(history: list, user_message: str, language: str = "e
         {"role": "user", "content": user_message}
     ]
     
-    return await _call_grok_api(messages, use_risk_scoring=True)
+    return await _call_ai_api(messages, use_risk_scoring=True)
 
 
-async def get_grok_risk_assessment(history: list, user_message: str, language: str = "en", pregnancy_weeks: int = None) -> Dict[str, Any]:
+async def get_ai_risk_assessment(history: list, user_message: str, language: str = "en", pregnancy_weeks: int = None) -> Dict[str, Any]:
     """
-    Get structured risk assessment from Grok with JSON output.
+    Get structured risk assessment with JSON output.
     
     Returns:
         Dict with: response_text, risk_level (0-1), reason, recommended_action
@@ -107,7 +107,7 @@ async def get_grok_risk_assessment(history: list, user_message: str, language: s
     ]
     
     try:
-        response_text = await _call_grok_api(messages, use_risk_scoring=True)
+        response_text = await _call_ai_api(messages, use_risk_scoring=True)
         
         # Try to parse JSON from response
         # Handle cases where AI wraps JSON in markdown code blocks
@@ -139,27 +139,16 @@ async def get_grok_risk_assessment(history: list, user_message: str, language: s
     except Exception as e:
         # Fallback to basic response
         return {
-            "response_text": await _call_grok_api(messages, use_risk_scoring=False),
+            "response_text": await _call_ai_api(messages, use_risk_scoring=False),
             "risk_level": 0.3,
             "reason": "Parsing error - manual review recommended",
             "recommended_action": "monitor"
         }
 
 
-async def _call_grok_api(messages: list, use_risk_scoring: bool = False) -> str:
+async def _call_ai_api(messages: list, use_risk_scoring: bool = False) -> str:
     """
-    Internal function to call Grok API.
-    
-    Args:
-        messages: Conversation messages
-        use_risk_scoring: If True, request structured output
-    
-    Returns:
-        API response text
-    """
-async def _call_grok_api(messages: list, use_risk_scoring: bool = False) -> str:
-    """
-    Internal function to call Grok API.
+    Internal function to call AI API.
     
     Args:
         messages: Conversation messages
@@ -169,7 +158,7 @@ async def _call_grok_api(messages: list, use_risk_scoring: bool = False) -> str:
         API response text
     """
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # Use grok-4.1-fast as primary model (2026 latest with superior reasoning)
+        # Use latest AI model with advanced reasoning
         models_to_try = ["grok-4.1-fast", "grok-4"]
         
         for model in models_to_try:
@@ -188,7 +177,7 @@ async def _call_grok_api(messages: list, use_risk_scoring: bool = False) -> str:
                 resp = await client.post(
                     "https://api.x.ai/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {settings.GROK_API_KEY}",
+                        "Authorization": f"Bearer {settings.AI_API_KEY}",
                         "Content-Type": "application/json"
                     },
                     json=payload

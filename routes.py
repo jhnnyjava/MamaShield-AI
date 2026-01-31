@@ -6,7 +6,7 @@ import dateparser
 
 from config import settings
 from database import get_or_create_user, append_history, log_metric, update_user
-from grok_service import get_grok_response, get_grok_risk_assessment
+from ai_service import get_ai_response, get_ai_risk_assessment
 from sms_service import send_sms
 from danger_detection import detect_danger_signs
 from chw_referral import send_chw_alert, send_anc_visit_thank_you, get_farm_specific_tips, track_farm_worker_engagement
@@ -76,7 +76,7 @@ async def process_message(phone: str, text: str) -> str:
     history = user.history or []
     pregnancy_weeks = user.pregnancy_weeks
     
-    # Use advanced Grok risk assessment for better precision
+    # Use advanced AI risk assessment for better precision
     risk_assessment = await get_grok_risk_assessment(history, text, language, pregnancy_weeks)
     
     ai_response = risk_assessment.get("response_text", "Please visit your clinic for checkup.")
