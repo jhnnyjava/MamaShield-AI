@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     APP_SECRET: str
     DEFAULT_LANGUAGE: str = "en"
     SMS_DISCLAIMER: str
+    CHW_PHONE: str
     
     model_config = SettingsConfigDict(
         env_file=".env",

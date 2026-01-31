@@ -22,6 +22,7 @@ class User(Base):
     pregnancy_weeks = Column(Integer, nullable=True)
     last_interaction = Column(DateTime)
     history = Column(JSON, default=list)  # list of {"role": str, "content": str}, last 8-10
+    interaction_count = Column(Integer, default=0)  # Track interactions for ANC polling
 
 
 class Metrics(Base):
