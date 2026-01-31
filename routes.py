@@ -2,7 +2,7 @@ from fastapi import APIRouter, Form, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from database import get_or_create_user, append_history
+from database import get_or_create_user, append_history, log_metric
 from grok_service import get_grok_response
 from sms_service import send_sms
 from danger_detection import detect_danger_signs
@@ -27,6 +27,9 @@ async def receive_sms(
     - text: message content
     """
     try:
+        # Log incoming message
+        await log_metric("message_received")
+        
         # Get or create user
         user = await get_or_create_user(phone)
         language = user.language or "en"
@@ -34,7 +37,9 @@ async def receive_sms(
         # Check for danger signs first
         is_danger, danger_msg = detect_danger_signs(text, language)
         if is_danger:
+            await log_metric("danger_flag", {"language": language})
             await send_sms(phone, danger_msg)
+            await log_metric("message_sent")
             await append_history(user.phone_hash, "user", text)
             await append_history(user.phone_hash, "assistant", danger_msg)
             return {"status": "danger_alert_sent"}
@@ -46,7 +51,9 @@ async def receive_sms(
         ai_response = await get_grok_response(history, text, language)
         
         # Send SMS response
-        await send_sms(phone, ai_response)
+        sms_result = await send_sms(phone, ai_response)
+        if sms_result:
+            await log_metric("message_sent", {"language": language})
         
         # Update conversation history
         await append_history(user.phone_hash, "user", text)

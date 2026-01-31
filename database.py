@@ -24,6 +24,17 @@ class User(Base):
     history = Column(JSON, default=list)  # list of {"role": str, "content": str}, last 8-10
 
 
+class Metrics(Base):
+    """Metrics model for anonymized impact tracking."""
+    __tablename__ = "metrics"
+    
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    event_type = Column(String)  # e.g., 'registration', 'message_sent', 'danger_flag', 'anc_poll_yes'
+    count = Column(Integer, default=1)
+    details = Column(JSON, default=dict)  # e.g., {'language': 'kal'}
+
+
 # Create async engine
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
@@ -93,3 +104,11 @@ async def append_history(phone_hash: str, role: str, content: str):
             user.history = history[-10:]  # Keep last 10 messages
             user.last_interaction = datetime.utcnow()
             await session.commit()
+
+
+async def log_metric(event_type: str, details: dict = {}):
+    """Log anonymized metrics for impact tracking."""
+    async with AsyncSessionLocal() as session:
+        metric = Metrics(event_type=event_type, details=details)
+        session.add(metric)
+        await session.commit()
