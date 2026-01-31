@@ -20,6 +20,7 @@ sqlalchemy[asyncio]>=2.0.0
 slowapi>=0.1.9  # rate limiting
 python-multipart  # for Form in FastAPI
 dateparser  # for parsing due dates
+pandas>=2.0.0  # for metrics export
 
 # Testing
 pytest>=8.0.0
