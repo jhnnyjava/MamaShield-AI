@@ -1,5 +1,37 @@
 import httpx
 from config import settings
+from cultural_knowledge import is_culturally_sensitive_topic, get_kalenjin_phrase
+
+
+async def enrich_prompt_with_culture(base_prompt: str, language: str, user_message: str = "") -> str:
+    """
+    Enrich system prompt with Kalenjin cultural knowledge.
+    
+    Args:
+        base_prompt: Base system prompt
+        language: Language code ('kal' for Kalenjin)
+        user_message: User's message to check for cultural topics
+    
+    Returns:
+        Culturally enriched prompt
+    """
+    if language == "kal" or is_culturally_sensitive_topic(user_message):
+        cultural_addition = (
+            "\n\nCULTURAL CONTEXT (Kalenjin/Bomet traditions): "
+            "You are culturally sensitive to Kalenjin women in Bomet. "
+            "RECOMMENDED: Mwaiti (milk - 63% prefer), managu/sukuma wiki (greens for blood), "
+            "ugali/uji (strength for delivery), liver (iron). "
+            "TRADITIONALLY AVOIDED (>60%): Eggs, meat organs (tongue, heart) - elders say causes big baby/hard labor. "
+            "Avocado, oily foods (20-40% avoid) - fear of complications. "
+            "APPROACH: Respect these traditions, blend with MoH evidence-based advice. "
+            "Explain avoidances without judgment. If language='kal', use Kalenjin/English mix. "
+            "Example: 'Drink mwaiti for strong bones, eat managu for blood.' "
+            "If they avoid eggs, suggest beans and milk for protein. "
+            "Emphasize: Light baby for easy delivery is culturally valued and medically safe."
+        )
+        return base_prompt + cultural_addition
+    
+    return base_prompt
 
 
 async def get_grok_response(history: list, user_message: str, language: str = "en") -> str:
@@ -21,6 +53,9 @@ async def get_grok_response(history: list, user_message: str, language: str = "e
         f"convulsions, fever, reduced fetal movement). Keep responses short for SMS "
         f"(<250 chars). Include disclaimer if needed."
     )
+    
+    # Enrich prompt with cultural knowledge for Kalenjin speakers or nutrition queries
+    system_prompt = await enrich_prompt_with_culture(system_prompt, language, user_message)
     
     messages = [
         {"role": "system", "content": system_prompt}

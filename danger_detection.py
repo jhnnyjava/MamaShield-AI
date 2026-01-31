@@ -7,7 +7,7 @@ def detect_danger_signs(text: str, language: str = "en") -> tuple[bool, str]:
     
     Args:
         text: User message to analyze
-        language: Language code ("en" or "sw")
+        language: Language code ("en", "sw", or "kal")
     
     Returns:
         Tuple of (is_danger_detected, warning_message)
@@ -22,7 +22,19 @@ def detect_danger_signs(text: str, language: str = "en") -> tuple[bool, str]:
         "kuona giza", "mshtuko", "homa", "mtoto ashangaa"
     ]
     
-    keywords = en_keywords if language == "en" else sw_keywords
+    # Kalenjin danger sign keywords
+    kal_keywords = [
+        "bleeding", "damu", "pain makali", "kichwa kuuma",
+        "swelling", "vision", "convulsions", "homa", "baby not moving"
+    ]
+    
+    if language == "kal":
+        keywords = kal_keywords
+    elif language == "sw":
+        keywords = sw_keywords
+    else:
+        keywords = en_keywords
+    
     text_lower = text.lower()
     
     for kw in keywords:
