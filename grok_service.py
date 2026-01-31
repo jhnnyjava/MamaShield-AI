@@ -1,6 +1,5 @@
 import httpx
 from config import settings
-from main import DISCLAIMER
 
 
 async def get_grok_response(history: list, user_message: str, language: str = "en") -> str:
@@ -48,7 +47,7 @@ async def get_grok_response(history: list, user_message: str, language: str = "e
             content = resp.json()["choices"][0]["message"]["content"]
             
             # Append disclaimer (truncate if too long)
-            return content + " " + DISCLAIMER[:100]
+            return content + " " + settings.SMS_DISCLAIMER[:100]
             
         except Exception as e:
             return "Sorry, technical issue. Call your clinic or 1195 now."

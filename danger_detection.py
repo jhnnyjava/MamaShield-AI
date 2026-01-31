@@ -1,4 +1,4 @@
-from main import DISCLAIMER
+from config import settings
 
 
 def detect_danger_signs(text: str, language: str = "en") -> tuple[bool, str]:
@@ -27,6 +27,6 @@ def detect_danger_signs(text: str, language: str = "en") -> tuple[bool, str]:
     
     for kw in keywords:
         if kw in text_lower:
-            return True, f"Danger sign detected! Go to clinic NOW or call 1195. {DISCLAIMER}"
+            return True, f"Danger sign detected! Go to clinic NOW or call 1195. {settings.SMS_DISCLAIMER}"
     
     return False, None

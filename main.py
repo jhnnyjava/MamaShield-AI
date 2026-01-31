@@ -24,9 +24,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# SMS disclaimer
-DISCLAIMER = settings.SMS_DISCLAIMER
-
 
 @app.on_event("startup")
 async def startup():
