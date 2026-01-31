@@ -6,7 +6,7 @@ import dateparser
 
 from config import settings
 from database import get_or_create_user, append_history, log_metric, update_user
-from grok_service import get_grok_response
+from grok_service import get_grok_response, get_grok_risk_assessment
 from sms_service import send_sms
 from danger_detection import detect_danger_signs
 from chw_referral import send_chw_alert, send_anc_visit_thank_you, get_farm_specific_tips, track_farm_worker_engagement
@@ -34,6 +34,13 @@ async def process_message(phone: str, text: str) -> str:
         response = f"Welcome tea farm mama! {farm_tips} We'll send you special tips for farm workers."
         await log_metric("tea_farm_registration")
         return response
+    
+    # Check for feedback responses
+    if text_upper in ['HELPFUL', 'NOT HELPFUL'] or (len(text_upper) <= 20 and ('HELP' in text_upper or 'YES' in text_upper or 'NO' in text_upper)):
+        feedback_value = "positive" if any(word in text_upper for word in ['YES', 'Y', 'HELPFUL', 'GOOD']) else "negative"
+        await log_metric("feedback_received", {"sentiment": feedback_value, "language": language})
+        await append_history(user.phone_hash, "feedback", feedback_value)
+        return "Thank you for your feedback! It helps us improve MamaShield for all mamas."
     
     # Check if this is an ANC poll response
     if text_upper in ['Y', 'YES', 'N', 'NO']:
@@ -67,9 +74,25 @@ async def process_message(phone: str, text: str) -> str:
     
     # Get conversation history
     history = user.history or []
+    pregnancy_weeks = user.pregnancy_weeks
     
-    # Get AI response from Grok
-    ai_response = await get_grok_response(history, text, language)
+    # Use advanced Grok risk assessment for better precision
+    risk_assessment = await get_grok_risk_assessment(history, text, language, pregnancy_weeks)
+    
+    ai_response = risk_assessment.get("response_text", "Please visit your clinic for checkup.")
+    risk_level = risk_assessment.get("risk_level", 0.3)
+    recommended_action = risk_assessment.get("recommended_action", "monitor")
+    
+    # Auto-trigger CHW alert for high-risk cases (>0.6)
+    if risk_level > 0.6:
+        await log_metric("high_risk_detected", {"risk_level": risk_level, "action": recommended_action})
+        location = "Mulot tea zone" if user.is_tea_farm_worker else "Bomet area"
+        risk_reason = risk_assessment.get("reason", "High risk detected by AI")
+        await send_chw_alert(phone, f"{text[:50]} - Risk: {risk_reason}", location)
+        
+        # Add urgent notice to response
+        if recommended_action == "emergency" or risk_level > 0.8:
+            ai_response = f"URGENT: {ai_response} Call 1195 or go to clinic NOW."
     
     # Increment interaction count
     interaction_count = (user.interaction_count or 0) + 1
@@ -79,8 +102,14 @@ async def process_message(phone: str, text: str) -> str:
     if interaction_count == 1:
         ai_response += " Reply TEA if you work/pick tea - get special tips for farm moms."
     
+    # Send feedback poll every 5 interactions
+    if interaction_count % 5 == 0:
+        feedback_poll = "Was our advice helpful? Reply YES or NO."
+        ai_response += f" {feedback_poll}"
+        await log_metric("feedback_poll_sent")
+    
     # Send ANC poll every 4 interactions
-    if interaction_count % 4 == 0:
+    elif interaction_count % 4 == 0:
         anc_poll = "Did you attend ANC this month? Reply Y for yes, N for no."
         ai_response += f" {anc_poll}"
     
