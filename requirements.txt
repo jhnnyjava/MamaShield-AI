@@ -1,0 +1,27 @@
+# pip install -r requirements.txt
+
+# Core FastAPI framework
+fastapi>=0.115.0
+uvicorn>=0.30.0
+
+# Configuration
+python-dotenv>=1.0.0
+pydantic-settings>=2.0.0
+
+# External APIs
+requests>=2.32.0  # for Grok API
+africastalking>=2.0.0  # latest SDK
+
+# Database
+aiosqlite>=0.20.0  # async SQLite
+sqlalchemy[asyncio]>=2.0.0
+
+# Utilities
+slowapi>=0.1.9  # rate limiting
+python-multipart  # for Form in FastAPI
+dateparser  # for parsing due dates
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+httpx>=0.27.0  # async testing
